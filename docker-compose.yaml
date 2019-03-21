@@ -29,7 +29,9 @@ services:
 
   lava-master:
     container_name: lava-master
-    image: lavasoftware/lava-server:2019.03
+    #image: lavasoftware/lava-server:2019.03
+    build:
+      context: ./lite-lava-master
     volumes:
     - devices:/etc/lava-server/dispatcher-config/devices:ro
     - health-checks:/etc/lava-server/dispatcher-config/health-checks:ro
