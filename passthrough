@@ -29,7 +29,7 @@ import docker
 
 # ACTION=="add", ENV{ID_SERIAL_SHORT}=="0240000031754e4500340018948500306461000097969900", RUN+="/home/galak/git/l/docker-compose/passthrough -a -d %E{ID_SERIAL_SHORT} -i lava-master -M %M -m %m -N %N -s %E{SUBSYSTEM}"
 
-def pass_device_into_container(instance, dev_type, major, minor, node, serial_no, subsys):
+def pass_device_into_container(instance, dev_type, major, minor, node, serial_no, subsys, links):
     client = docker.from_env()
 
     container = client.containers.get(instance)
@@ -43,6 +43,11 @@ def pass_device_into_container(instance, dev_type, major, minor, node, serial_no
                      " " + str(major) + " " + str(minor) + "'"
     container.exec_run(create_dev_cmd)
 
+    for link in links.split():
+        link_cmd = "sh -c 'mkdir -p $(dirname " + link + ");" + \
+                "ln -f -s " + node + " " + link + "'"
+        container.exec_run(link_cmd)
+
     udev_rule = open("/etc/udev/rules.d/lava-%s-%s.rules" % (serial_no, subsys), "w")
 
     udev_rule.write('ACTION=="remove",ENV{DEVNAME}=="' + node)
@@ -53,12 +58,14 @@ def pass_device_into_container(instance, dev_type, major, minor, node, serial_no
     udev_rule.write(' -m ' + str(minor))
     udev_rule.write(' -N ' + node)
     udev_rule.write(' -s ' + subsys)
+    if links:
+        udev_rule.write(' -l ' + "'" + links + "'")
     udev_rule.write('"\n')
 
     udev_rule.close()
 
 
-def remove_device_into_container(instance, dev_type, major, minor, node, serial_no, subsys):
+def remove_device_into_container(instance, dev_type, major, minor, node, serial_no, subsys, links):
     client = docker.from_env()
 
     container = client.containers.get(instance)
@@ -68,6 +75,10 @@ def remove_device_into_container(instance, dev_type, major, minor, node, serial_
     allow_devices.close()
     create_dev_cmd = "rm " + node
     container.exec_run(create_dev_cmd)
+
+    for link in links.split():
+        link_cmd = "rm " + link
+        container.exec_run(link_cmd)
 
     os.remove("/etc/udev/rules.d/lava-%s-%s.rules" % (serial_no, subsys))
 
@@ -86,6 +97,7 @@ def main():
                         help="Device minor")
     parser.add_argument("-N", "--device_node", type=str, required=True,
                         help="Device Node")
+    parser.add_argument("-l", "--link", type=str, help="Device Node Links", default="")
     parser.add_argument("-a", "--add", action="store_true",
                         help="Add device")
 
@@ -97,10 +109,11 @@ def main():
 
     if (options.add):
         print ("ADD %s %s" % (options.device_node, dev_type))
-        pass_device_into_container(options.instance, dev_type, options.major, options.minor, options.device_node, options.device_serial, options.subsystem)
+        print ("link [%s]" % options.link)
+        pass_device_into_container(options.instance, dev_type, options.major, options.minor, options.device_node, options.device_serial, options.subsystem, options.link)
     else:
         print ("REMOVE %s %s" % (options.device_node, dev_type))
-        remove_device_into_container(options.instance, dev_type, options.major, options.minor, options.device_node, options.device_serial, options.subsystem)
+        remove_device_into_container(options.instance, dev_type, options.major, options.minor, options.device_node, options.device_serial, options.subsystem, options.link)
 
 
 if __name__ == '__main__':
