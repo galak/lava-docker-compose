@@ -23,33 +23,54 @@
 import pyudev
 import argparse
 import os
+import stat
 import docker
 
+def dev_info_from_device(device):
+    dev_type = None
+    mode = os.stat(device.device_node).st_mode
+    if (stat.S_ISCHR(mode)):
+        dev_type = "c"
+    if (stat.S_ISBLK(mode)):
+        dev_type = "b"
+
+    return (dev_type, os.major(device.device_number), os.minor(device.device_number), device.device_node)
 
 def get_device_numbers(serial_no):
-    result = None, None
+    result = []
     context = pyudev.Context()
 
     devices = context.list_devices(subsystem='usb')
+    device = None
 
     for device in devices:
         serial = device.attributes.get("serial")
         if serial is not None and serial_no in serial.decode("utf-8"):
-            result = os.major(device.device_number), os.minor(device.device_number)
+            result.append(dev_info_from_device(device))
             break
+
+    child = device.children
+    for c in child:
+        if c.device_number != 0 and c.subsystem in ["block", "tty"]:
+            result.append(dev_info_from_device(c))
 
     return result
 
 
-def pass_device_into_container(instance, major, minor):
+def pass_device_into_container(instance, devs):
     client = docker.from_env()
 
     container = client.containers.get(instance)
 
-    allow_devices = open("/sys/fs/cgroup/devices/docker/%s/devices.allow" % container.id, "w")
-    allow_devices.write("c %s:%s rwm" % (major, minor))
-    allow_devices.close()
-
+    for (dev_type, major, minor, node) in devs:
+        allow_devices = open("/sys/fs/cgroup/devices/docker/%s/devices.allow" % container.id, "w")
+        allow_devices.write("%s %s:%s rwm\n" % (dev_type, major, minor))
+        allow_devices.close()
+        create_dev_cmd = "sh -c '[ ! -e " + node + " ] " + \
+                         "&& mkdir -p $(dirname " + node + \
+                         ") && mknod " + node + " " + dev_type + \
+                         " " + str(major) + " " + str(minor) + "'"
+        container.exec_run(create_dev_cmd)
 
 def main():
     parser = argparse.ArgumentParser(description='USB device passthrough for docker containers', add_help=False)
@@ -61,10 +82,10 @@ def main():
 
     options = parser.parse_args()
 
-    major, minor = get_device_numbers(options.device_serial)
+    devs = get_device_numbers(options.device_serial)
 
-    if major is not None:
-        pass_device_into_container(options.instance, major, minor)
+    if devs is not None:
+        pass_device_into_container(options.instance, devs)
 
 
 if __name__ == '__main__':
