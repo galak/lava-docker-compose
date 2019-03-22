@@ -32,14 +32,14 @@ services:
     #image: lavasoftware/lava-server:2019.03
     build:
       context: ./lite-lava-master
+    cap_add:
+    - SYS_ADMIN
     volumes:
     - devices:/etc/lava-server/dispatcher-config/devices:ro
     - health-checks:/etc/lava-server/dispatcher-config/health-checks:ro
     - ./overlays/lava-server/etc/lava-server/instance.conf:/etc/lava-server/instance.conf:ro
     - ./overlays/lava-server/etc/lava-server/settings.conf:/etc/lava-server/settings.conf:ro
     - ./overlays/lava-server/etc/lava-server/lava-master:/etc/lava-server/lava-master:ro
-    devices:
-    - /dev/bus/usb/005/036
     depends_on:
     - db
     environment:
