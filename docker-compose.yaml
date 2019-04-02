@@ -93,7 +93,7 @@ services:
     container_name: lava-dispatcher
     image: lavasoftware/lava-dispatcher:2019.03
     devices:
-    - /dev/kvm # needed for QEMU
+            #    - /dev/kvm # needed for QEMU
     - /dev/net/tun # needed for QEMU
     cap_add:
     - NET_ADMIN # needed for QEMU
