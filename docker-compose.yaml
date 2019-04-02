@@ -29,11 +29,7 @@ services:
 
   lava-master:
     container_name: lava-master
-    #image: lavasoftware/lava-server:2019.03
-    build:
-      context: ./lite-lava-master
-    cap_add:
-    - SYS_ADMIN
+    image: lavasoftware/lava-server:2019.03
     volumes:
     - devices:/etc/lava-server/dispatcher-config/devices:ro
     - health-checks:/etc/lava-server/dispatcher-config/health-checks:ro
@@ -91,7 +87,9 @@ services:
 
   lava-dispatcher:
     container_name: lava-dispatcher
-    image: lavasoftware/lava-dispatcher:2019.03
+    #    image: lavasoftware/lava-dispatcher:2019.03
+    build:
+      context: ./lite-lava-master
     devices:
             #    - /dev/kvm # needed for QEMU
     - /dev/net/tun # needed for QEMU
