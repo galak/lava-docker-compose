@@ -48,7 +48,12 @@ def pass_device_into_container(instance, dev_type, major, minor, node, serial_no
                 "ln -f -s " + node + " " + link + "'"
         container.exec_run(link_cmd)
 
-    udev_rule = open("/etc/udev/rules.d/lava-%s-%s.rules" % (serial_no, subsys), "w")
+    udev_file_name = "/etc/udev/rules.d/lava-%s-%s" % (serial_no, subsys)
+    if ('ID_USB_INTERFACE_NUM' in os.environ):
+        udev_file_name += "-if%s" % os.environ['ID_USB_INTERFACE_NUM']
+    udev_file_name += ".rules"
+
+    udev_rule = open(udev_file_name, "w")
 
     udev_rule.write('ACTION=="remove",ENV{DEVNAME}=="' + node)
     udev_rule.write('",RUN+="' + sys.argv[0])
@@ -80,7 +85,12 @@ def remove_device_into_container(instance, dev_type, major, minor, node, serial_
         link_cmd = "rm " + link
         container.exec_run(link_cmd)
 
-    os.remove("/etc/udev/rules.d/lava-%s-%s.rules" % (serial_no, subsys))
+    udev_file_name = "/etc/udev/rules.d/lava-%s-%s" % (serial_no, subsys)
+    if ('ID_USB_INTERFACE_NUM' in os.environ):
+        udev_file_name += "-if%s" % os.environ['ID_USB_INTERFACE_NUM']
+    udev_file_name += ".rules"
+
+    os.remove(udev_file_name)
 
 def main():
     parser = argparse.ArgumentParser(description='USB device passthrough for docker containers', add_help=False)
