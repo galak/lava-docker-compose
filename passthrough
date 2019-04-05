@@ -27,7 +27,7 @@ import sys
 import stat
 import docker
 
-# ACTION=="add", ENV{ID_SERIAL_SHORT}=="E00A1029", RUN+="/home/galak/git/lava-docker-compose/passthrough -a -d %E{ID_SERIAL_SHORT} -i lava-dispatcher -M %M -m %m -N %N"
+# ACTION=="add", ENV{ID_SERIAL_SHORT}=="E00A1029", RUN+="/home/galak/git/lava-docker-compose/passthrough -a -d %E{ID_SERIAL_SHORT} -i lava-dispatcher"
 
 def pass_device_into_container(instance, dev_type, major, minor, node, serial_no, subsys, links):
     client = docker.from_env()
@@ -59,9 +59,6 @@ def pass_device_into_container(instance, dev_type, major, minor, node, serial_no
     udev_rule.write('",RUN+="' + sys.argv[0])
     udev_rule.write(' -d ' + serial_no)
     udev_rule.write(' -i ' + instance)
-    udev_rule.write(' -M ' + str(major))
-    udev_rule.write(' -m ' + str(minor))
-    udev_rule.write(' -N ' + node)
     udev_rule.write('"\n')
 
     udev_rule.close()
@@ -96,12 +93,6 @@ def main():
                         help="Devices serial number")
     parser.add_argument("-i", "--instance", type=str, required=True,
                         help="Docker instance")
-    parser.add_argument("-M", "--major", type=int, required=True,
-                        help="Device major")
-    parser.add_argument("-m", "--minor", type=int, required=True,
-                        help="Device minor")
-    parser.add_argument("-N", "--device_node", type=str, required=True,
-                        help="Device Node")
     parser.add_argument("-a", "--add", action="store_true",
                         help="Add device")
 
@@ -116,12 +107,16 @@ def main():
     if (subsys == "block"):
         dev_type = "b"
 
+    major = os.environ['MAJOR']
+    minor = os.environ['MINOR']
+    device_node = os.environ['DEVNAME']
+
     if (options.add):
-        print ("ADD %s %s" % (options.device_node, dev_type))
-        pass_device_into_container(options.instance, dev_type, options.major, options.minor, options.device_node, options.device_serial, subsys, links)
+        print ("ADD %s %s" % (device_node, dev_type))
+        pass_device_into_container(options.instance, dev_type, major, minor, device_node, options.device_serial, subsys, links)
     else:
-        print ("REMOVE %s %s" % (options.device_node, dev_type))
-        remove_device_into_container(options.instance, dev_type, options.major, options.minor, options.device_node, options.device_serial, subsys, links)
+        print ("REMOVE %s %s" % (device_node, dev_type))
+        remove_device_into_container(options.instance, dev_type, major, minor, device_node, options.device_serial, subsys, links)
 
 
 if __name__ == '__main__':
