@@ -62,9 +62,6 @@ def pass_device_into_container(instance, dev_type, major, minor, node, serial_no
     udev_rule.write(' -M ' + str(major))
     udev_rule.write(' -m ' + str(minor))
     udev_rule.write(' -N ' + node)
-    udev_rule.write(' -s ' + subsys)
-    if links:
-        udev_rule.write(' -l ' + "'" + links + "'")
     udev_rule.write('"\n')
 
     udev_rule.close()
@@ -99,31 +96,32 @@ def main():
                         help="Devices serial number")
     parser.add_argument("-i", "--instance", type=str, required=True,
                         help="Docker instance")
-    parser.add_argument("-s", "--subsystem", type=str, required=True,
-                        help="Subsystem")
     parser.add_argument("-M", "--major", type=int, required=True,
                         help="Device major")
     parser.add_argument("-m", "--minor", type=int, required=True,
                         help="Device minor")
     parser.add_argument("-N", "--device_node", type=str, required=True,
                         help="Device Node")
-    parser.add_argument("-l", "--link", type=str, help="Device Node Links", default="")
     parser.add_argument("-a", "--add", action="store_true",
                         help="Add device")
 
     options = parser.parse_args()
 
+    subsys = os.environ['SUBSYSTEM']
+    links = ""
+    if ('DEVLINKS' in os.environ):
+        links = os.environ['DEVLINKS']
+
     dev_type = "c"
-    if (options.subsystem == "block"):
+    if (subsys == "block"):
         dev_type = "b"
 
     if (options.add):
         print ("ADD %s %s" % (options.device_node, dev_type))
-        print ("link [%s]" % options.link)
-        pass_device_into_container(options.instance, dev_type, options.major, options.minor, options.device_node, options.device_serial, options.subsystem, options.link)
+        pass_device_into_container(options.instance, dev_type, options.major, options.minor, options.device_node, options.device_serial, subsys, links)
     else:
         print ("REMOVE %s %s" % (options.device_node, dev_type))
-        remove_device_into_container(options.instance, dev_type, options.major, options.minor, options.device_node, options.device_serial, options.subsystem, options.link)
+        remove_device_into_container(options.instance, dev_type, options.major, options.minor, options.device_node, options.device_serial, subsys, links)
 
 
 if __name__ == '__main__':
