@@ -27,7 +27,7 @@ import sys
 import stat
 import docker
 
-# ACTION=="add", ENV{ID_SERIAL_SHORT}=="0240000031754e4500340018948500306461000097969900", RUN+="/home/galak/git/l/docker-compose/passthrough -a -d %E{ID_SERIAL_SHORT} -i lava-master -M %M -m %m -N %N -s %E{SUBSYSTEM}"
+# ACTION=="add", ENV{ID_SERIAL_SHORT}=="E00A1029", RUN+="/home/galak/git/lava-docker-compose/passthrough -a -d %E{ID_SERIAL_SHORT} -i lava-dispatcher -M %M -m %m -N %N"
 
 def pass_device_into_container(instance, dev_type, major, minor, node, serial_no, subsys, links):
     client = docker.from_env()
